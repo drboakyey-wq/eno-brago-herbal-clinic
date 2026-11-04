@@ -1,4 +1,11 @@
-<!doctype html>
+<meta <script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./service-worker.js")
+      .catch(error => console.error("Service worker error:", error));
+  });
+}
+</script>name="viewport" content="width=device-width, initial-scale=1"><!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -2254,3 +2261,5 @@ show("dashboard");
 </script>
 </body>
 </html>
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="theme-color" content="#176b45"></body>
