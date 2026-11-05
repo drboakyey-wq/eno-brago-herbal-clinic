@@ -1,15 +1,12 @@
-<meta <script>
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./service-worker.js")
-      .catch(error => console.error("Service worker error:", error));
-  });
-}
-</script>name="viewport" content="width=device-width, initial-scale=1"><!doctype html>
+<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#176b45">
+<meta name="description" content="Eno Brago Herbal Clinic management app">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icon.svg" type="image/svg+xml">
 <title>Eno Brago Herbal Clinic — App Prototype</title>
 <style>
 :root{--green:#176b35;--green2:#2d914a;--pale:#edf7ef;--ink:#173324;--muted:#64756a;--line:#dce8df;--white:#fff;--bg:#f5f8f5}
@@ -480,7 +477,7 @@ materials:`<div class="toprow"><h2>Raw Materials & Suppliers</h2><span class="pi
 anatomy:`<h2>3D Anatomy Explorer</h2>
 <div class="notice">Educational anatomy reference only. It does not examine a patient or diagnose disease.</div>
 <div class="panel"><h3>Explore human anatomy in 3D</h3><p class="muted">Open a full interactive 3D anatomy atlas with rotate, zoom, layers and selectable structures. This atlas is an external educational resource and needs an internet connection.</p>
-<p><a class="btn" href="https://www.z-anatomy.com/" target="_blank" rel="noopener">Open 3D Anatomy Atlas ↗</a></p>
+<p><a class="btn" href="https://nqwrc.github.io/3d-anatomy/" target="_blank" rel="noopener">Open 3D Anatomy Atlas ↗</a></p>
 <div class="grid2"><div><label for="anatomyTopic">Anatomy topic</label><select id="anatomyTopic"><option value="overview">Human body overview</option><option value="skeleton">Skeletal system</option><option value="muscles">Muscular system</option><option value="nervous">Nervous system</option><option value="cardiovascular">Heart and blood vessels</option><option value="respiratory">Respiratory system</option><option value="digestive">Digestive system</option><option value="urinary">Urinary system</option><option value="reproductive">Reproductive system</option></select></div><div><label for="anatomySex">Anatomy model</label><select id="anatomySex"><option value="all">General anatomy</option><option value="female">Female anatomy</option><option value="male">Male anatomy</option></select></div></div>
 <p class="muted">Use the atlas to rotate the model, zoom in, show or hide body layers, and select anatomical structures. Availability of individual structures depends on the external atlas.</p></div>
 <div class="panel"><h3>Clinical reference reminder</h3><p class="muted">Use anatomy information for education and explanation. It cannot determine what is happening inside an individual patient's body; imaging and clinical assessment are needed for that.</p></div>`,
@@ -497,8 +494,8 @@ disease:`<h2>Disease Checker — Clinical Decision Support</h2>
 <div class="panel"><h3>Clinical review</h3><p class="muted">The result is a structured symptom summary, not a disease prediction. Use examination, patient history and appropriate laboratory or imaging tests before reaching a diagnosis.</p></div>`,
 labreader:`<h2>Laboratory Report Reader</h2>
 <div class="notice">OCR can misread small print, decimals, units and reference ranges. Always compare extracted text with the original report. This tool does not diagnose disease.</div>
-<div class="panel"><h3>Upload or photograph a laboratory report</h3><label for="labImageFile">Report image (JPG, PNG or WEBP)</label><input id="labImageFile" type="file" accept="image/*" capture="environment">
-<p><button class="btn" id="readLabImage" type="button">Read Report Image</button></p><div id="ocrStatus" class="muted" aria-live="polite">Choose a clear, well-lit report image.</div>
+<div class="panel"><h3>Upload or photograph a laboratory report</h3><label for="labImageFile">Report image (JPG, PNG or WEBP)</label><input id="labImageFile" type="file" accept="image/*">
+<p><button class="btn" id="readLabImage" type="button">Read Report Image</button></p><p class="muted">OCR needs an internet connection on the hosted app. For best results, use a sharp, straight, well-lit image. Large or blurry reports may take longer.</p><div id="ocrStatus" class="muted" aria-live="polite">Choose a clear, well-lit report image.</div>
 <label for="ocrText">Extracted text — check and correct it</label><textarea id="ocrText" rows="10" maxlength="12000" placeholder="Recognized report text will appear here. You can also paste report text manually."></textarea>
 <p><button class="btn secondary" id="parseLabText" type="button">Identify possible result lines</button></p><div id="ocrParsed" class="muted"></div>
 <p class="muted">This reader does not automatically save to the patient's laboratory record. Verify the report and enter the confirmed values in Laboratory Records.</p></div>`,
@@ -554,6 +551,11 @@ clinicalcamera:`<h2>Clinical Camera</h2>
 <div class="notice">Privacy limitation: this version captures and previews images in your browser and can download them to your device. It does not yet securely upload photographs to the patient's Supabase record. Do not use it for real patient images until secure storage, access permissions, consent records and backup are implemented and tested.</div>
 </div>`,
 aiassistant:`<h2>🤖 Eno Brago Clinic Assistant</h2>
+<div class="panel">
+<h3>Open ChatGPT</h3>
+<p class="muted">Open ChatGPT in a separate tab when you need help. Do not paste identifiable patient information or passwords into a public AI chat.</p>
+<p><a class="btn" href="https://chatgpt.com/" target="_blank" rel="noopener noreferrer">Open ChatGPT ↗</a></p>
+</div>
 <div class="notice"><strong>Smart guided assistant — AI connection not yet enabled.</strong> This version helps with app workflows and organizes clinical information. A secure server connection is required before a real AI model can process patient information. Do not enter identifiable patient details here.</div>
 <div class="panel">
 <h3>What do you need help with?</h3>
@@ -2026,26 +2028,110 @@ show("dashboard");
     box.innerHTML+='<div class="panel"><h3>Symptom summary for clinician review</h3><p><strong>Age:</strong> '+escapeHtml(age||"Not entered")+'</p><p><strong>Duration:</strong> '+escapeHtml(duration||"Not entered")+'</p><p><strong>Symptoms:</strong><br>'+escapeHtml(symptoms).replace(/\n/g,"<br>")+'</p><p><strong>Warning signs:</strong> '+escapeHtml(flags.join("; ")||"None selected")+'</p><p class="muted">This is not a disease diagnosis or probability estimate. A clinician should review history, examination and appropriate tests.</p></div>';
   });
 
-  // OCR lab reader. Extracted text is editable and must be checked against the original.
-  document.addEventListener("click",async event=>{
-    const t=event.target instanceof Element?event.target:event.target?.parentElement;if(!t)return;
-    if(t.closest("#readLabImage")){
-      const file=document.getElementById("labImageFile").files?.[0],status=document.getElementById("ocrStatus");
-      if(!file){status.textContent="Choose a report image first.";return;}
-      if(!/^image\/(jpeg|png|webp)$/i.test(file.type)){status.textContent="Please choose a JPG, PNG or WEBP image.";return;}
-      status.textContent="Loading OCR engine…";
-      try{
-        if(!window.Tesseract){await new Promise((resolve,reject)=>{const s=document.createElement("script");s.src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";s.onload=resolve;s.onerror=()=>reject(new Error("Could not load OCR library. Check internet access."));document.head.appendChild(s);});}
-        status.textContent="Reading image. This may take a little while…";
-        const result=await window.Tesseract.recognize(file,"eng",{logger:m=>{if(m.status)status.textContent=m.status+(m.progress?" ("+Math.round(m.progress*100)+"%)":"");}});
-        document.getElementById("ocrText").value=result.data.text||"";
-        status.textContent="Text extraction finished. Check every name, number, decimal, unit and reference range against the original report.";
-      }catch(err){status.textContent="Could not read the image: "+(err.message||String(err));}
+  // OCR lab reader. Explicit asset URLs prevent the worker/core/language files
+  // from being guessed relative to a local content:// page.
+  document.addEventListener("click", async event => {
+    const target = event.target instanceof Element ? event.target : event.target?.parentElement;
+    if (!target) return;
+
+    if (target.closest("#readLabImage")) {
+      const fileInput = document.getElementById("labImageFile");
+      const status = document.getElementById("ocrStatus");
+      const button = document.getElementById("readLabImage");
+      const output = document.getElementById("ocrText");
+      const file = fileInput?.files?.[0];
+
+      if (!status || !button || !output) return;
+      if (!file) {
+        status.textContent = "Choose a report image first.";
+        return;
+      }
+      if (!/^image\/(jpeg|png|webp)$/i.test(file.type)) {
+        status.textContent = "Please choose a JPG, PNG or WEBP image.";
+        return;
+      }
+      if (file.size > 15 * 1024 * 1024) {
+        status.textContent = "This image is larger than 15 MB. Please resize it or take a smaller, clear photo.";
+        return;
+      }
+      if (location.protocol === "content:" || location.protocol === "file:") {
+        status.textContent = "You opened a local copy of the app. Open the hosted app in Chrome with internet access, then try the report image again.";
+        return;
+      }
+
+      let worker = null;
+      button.disabled = true;
+      button.textContent = "Reading…";
+      output.value = "";
+      status.textContent = "Loading OCR library and language files. The first run may take a few minutes…";
+
+      try {
+        if (!window.Tesseract) {
+          await new Promise((resolve, reject) => {
+            const existing = document.querySelector('script[data-tesseract-loader="true"]');
+            if (existing) {
+              existing.addEventListener("load", resolve, { once: true });
+              existing.addEventListener("error", () => reject(new Error("The OCR library could not be downloaded. Check your internet connection and reload the page.")), { once: true });
+              return;
+            }
+            const script = document.createElement("script");
+            script.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
+            script.async = true;
+            script.dataset.tesseractLoader = "true";
+            script.onload = resolve;
+            script.onerror = () => reject(new Error("The OCR library could not be downloaded. Check your internet connection and reload the page."));
+            document.head.appendChild(script);
+          });
+        }
+
+        if (!window.Tesseract || typeof window.Tesseract.createWorker !== "function") {
+          throw new Error("The OCR library loaded incorrectly. Reload the hosted app and try again.");
+        }
+
+        worker = await window.Tesseract.createWorker("eng", 1, {
+          workerPath: "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/worker.min.js",
+          corePath: "https://cdn.jsdelivr.net/npm/tesseract.js-core@v5.0.0",
+          langPath: "https://tessdata.projectnaptha.com/4.0.0",
+          logger: message => {
+            if (!message || !message.status) return;
+            const percent = typeof message.progress === "number"
+              ? " (" + Math.round(message.progress * 100) + "%)"
+              : "";
+            status.textContent = "OCR: " + message.status + percent;
+          }
+        });
+
+        status.textContent = "Reading the report image. Please keep this page open…";
+        const result = await worker.recognize(file);
+        output.value = (result && result.data && result.data.text) ? result.data.text.trim() : "";
+
+        if (output.value) {
+          status.textContent = "Text extraction finished. Check every patient detail, test name, number, decimal, unit and reference range against the original report.";
+        } else {
+          status.textContent = "No text was detected. Try a sharper, brighter, straight-on image, or type/paste the report text manually.";
+        }
+      } catch (error) {
+        const message = error && error.message ? error.message : String(error);
+        status.textContent = "Could not read this image: " + message + " You can still type or paste the report text below.";
+      } finally {
+        if (worker) {
+          try { await worker.terminate(); } catch (_) {}
+        }
+        button.disabled = false;
+        button.textContent = "Read Report Image";
+      }
     }
-    if(t.closest("#parseLabText")){
-      const text=document.getElementById("ocrText").value||"",lines=text.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
-      const matches=lines.filter(line=>/\d/.test(line));
-      document.getElementById("ocrParsed").innerHTML=matches.length?'<strong>Lines containing numbers (review manually):</strong><ul>'+matches.map(x=>'<li>'+escapeHtml(x)+'</li>').join("")+'</ul>':'No numeric result lines detected. Review the extracted text manually.';
+
+    if (target.closest("#parseLabText")) {
+      const text = document.getElementById("ocrText")?.value || "";
+      const lines = text.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+      const matches = lines.filter(line => /\d/.test(line));
+      const parsed = document.getElementById("ocrParsed");
+      if (!parsed) return;
+      parsed.innerHTML = matches.length
+        ? '<strong>Lines containing numbers (review manually):</strong><ul>' +
+          matches.map(line => '<li>' + escapeHtml(line) + '</li>').join("") + '</ul>'
+        : "No numeric result lines detected. Review the extracted text manually.";
     }
   });
 
@@ -2167,7 +2253,17 @@ show("dashboard");
       if(!byId("ccConsent")?.checked){ alert("Confirm patient consent before printing clinical photo notes."); return; }
       const w = window.open("","_blank");
       if(!w){ alert("Allow pop-ups to print the notes."); return; }
-      w.document.write("<html><head><title>Clinical Photo Notes</title></head><body><h2>Eno Brago Herbal Clinic — Clinical Photo Notes</h2><p><b>Patient:</b> "+escapeText(patient)+"</p><p><b>Photo type/body area:</b> "+escapeText(area)+"</p><p><b>Date:</b> "+new Date().toLocaleString()+"</p><p><b>Notes:</b><br>"+escapeText(notes).replace(/\\n/g,"<br>")+"</p><p>Patient consent confirmed. Photograph is for clinician review and is not a diagnosis.</p></body></html>");
+      w.document.write("<html><head><title>Clinical Photo Notes</title></head><body><h2>Eno Brago Herbal Clinic — Clinical Photo Notes</h2><p><b>Patient:</b> "+escapeText(patient)+"</p><p><b>Photo type/body area:</b> "+escapeText(area)+"</p><p><b>Date:</b> "+new Date().toLocaleString()+"</p><p><b>Notes:</b><br>"+escapeText(notes).replace(/\\n/g,"<br>")+"</p><p>Patient consent confirmed. Photograph is for clinician review and is not a diagnosis.</p>
+<script>
+if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
+  window.addEventListener("load", function () {
+    navigator.serviceWorker.register("./service-worker.js")
+      .catch(function (error) { console.warn("Service worker registration failed:", error); });
+  });
+}
+</script>
+
+</body></html>");
       w.document.close(); w.print();
     }
   });
@@ -2252,14 +2348,32 @@ show("dashboard");
     }
     if(id === "aiPrintSummary" && lastSummary){
       const w = window.open("","_blank"); if(!w){ alert("Allow pop-ups to print."); return; }
-      w.document.write("<html><head><title>Clinician Review Summary</title></head><body><pre style='white-space:pre-wrap;font:14px Arial'>"+esc(lastSummary)+"</pre></body></html>");
+      w.document.write("<html><head><title>Clinician Review Summary</title></head><body><pre style='white-space:pre-wrap;font:14px Arial'>"+esc(lastSummary)+"</pre>
+<script>
+if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
+  window.addEventListener("load", function () {
+    navigator.serviceWorker.register("./service-worker.js")
+      .catch(function (error) { console.warn("Service worker registration failed:", error); });
+  });
+}
+</script>
+
+</body></html>");
       w.document.close(); w.print();
     }
   });
 })();
 
 </script>
+
+<script>
+if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
+  window.addEventListener("load", function () {
+    navigator.serviceWorker.register("./service-worker.js")
+      .catch(function (error) { console.warn("Service worker registration failed:", error); });
+  });
+}
+</script>
+
 </body>
 </html>
-<link rel="manifest" href="./manifest.webmanifest">
-<meta name="theme-color" content="#176b45"></body>
