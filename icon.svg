@@ -1,7 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="100" fill="#176b45"/>
-  <circle cx="256" cy="238" r="172" fill="#ffffff"/>
-  <path d="M256 344 C151 292 168 190 256 145 C344 190 361 292 256 344Z" fill="#2d914a"/>
-  <path d="M256 322V190" stroke="#ffffff" stroke-width="15" fill="none"/>
-  <text x="256" y="456" font-size="76" font-weight="bold" text-anchor="middle" fill="#ffffff">EB</text>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="110" fill="#176b35"/><circle cx="256" cy="256" r="174" fill="#fff"/><path d="M256 365V154M256 250c-76 0-112-42-112-96 66-2 112 30 112 96Zm0 46c76 0 112-42 112-96-66-2-112 30-112 96Z" fill="none" stroke="#176b35" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/></svg>

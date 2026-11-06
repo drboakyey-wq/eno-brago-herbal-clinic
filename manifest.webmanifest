@@ -1,19 +1,10 @@
 {
   "name": "Eno Brago Herbal Clinic",
-  "short_name": "Eno Brago",
-  "description": "Eno Brago Herbal Clinic Management App",
+  "short_name": "Eno Brago Clinic",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "orientation": "portrait",
+  "background_color": "#f5f8f5",
   "theme_color": "#176b45",
-  "background_color": "#ffffff",
-  "icons": [
-    {
-      "src": "./icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any"
-    }
-  ]
+  "icons": [{"src":"./icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
 }
