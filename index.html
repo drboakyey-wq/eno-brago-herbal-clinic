@@ -36,6 +36,29 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;b
 .auth-error{padding:10px 12px;border-radius:8px;background:#fff0ed;color:#9b2c1d;font-size:13px;margin:12px 0;display:none}
 #appShell{display:none}.signout{float:right;background:#fff;color:#176b35;border:1px solid #cfe3d3;border-radius:8px;padding:8px 12px;font-weight:bold}
 
+
+/* Premium, high-readability typography and laboratory workspace */
+:root{--lab-ink:#142b22;--lab-muted:#52665c;--lab-accent:#145c37;--lab-border:#d6e3da}
+body{font-family:Inter,"Aptos","Segoe UI",Roboto,Arial,sans-serif;font-size:16.5px;line-height:1.65;letter-spacing:.005em;color:#172b22}
+button,input,select,textarea{font-family:inherit;font-size:16px}
+h1,h2,h3{font-family:Inter,"Aptos","Segoe UI",Roboto,Arial,sans-serif;letter-spacing:-.025em}
+#content{min-width:0}
+#content [data-page="labreader"],#content .lab-reader{font-size:16px}
+#content .panel:has(#ocrText){padding:clamp(16px,3vw,26px);border:1px solid #d4e4d9;box-shadow:0 8px 24px rgba(20,65,39,.07)}
+#ocrText{font-family:"Aptos","Segoe UI",Roboto,Arial,sans-serif;font-size:16px;line-height:1.75;letter-spacing:.015em;color:#142b22;background:#fbfdfb;border:1.5px solid #c9dacf;border-radius:12px;padding:14px;min-height:220px}
+#ocrStatus{font-size:14px;line-height:1.65;padding:10px 12px;background:#f1f7f3;border-radius:10px;margin:10px 0;color:#294d39}
+.lab-results{font-size:15px;line-height:1.6;min-width:620px;border:1px solid var(--lab-border);border-radius:12px;overflow:hidden}
+.lab-results th{font-size:13px;text-transform:uppercase;letter-spacing:.045em;padding:13px 10px;background:#eaf4ed}
+.lab-results td{font-size:15px;padding:13px 10px;color:#20392c}
+.lab-warning{font-size:14px;line-height:1.65;padding:14px;border-radius:12px}
+.lab-uncertain{color:#8a4b08!important;font-weight:700;background:#fff8e9}
+.lab-good{color:#176b35!important;font-weight:700}
+.lab-camera-label{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:12px 16px;border-radius:10px;background:#e7f2ea;border:1px solid #bcd6c4;color:#145c37;font-weight:750;cursor:pointer;text-align:center}
+.lab-camera-label:focus{outline:3px solid #8dbda0;outline-offset:3px}
+.lab-file-control{display:block;width:100%;min-height:46px;padding:9px;border:1px solid #cbd9cf;border-radius:10px;background:#fff;color:#263b30}
+.lab-upload-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:end}
+@media(max-width:600px){body{font-size:16px}.lab-upload-grid{grid-template-columns:1fr}.lab-results{font-size:14px}.lab-results td{font-size:14px;padding:11px 8px}#ocrText{font-size:16px;min-height:240px}}
+
 </style>
 </head>
 <body>
@@ -496,12 +519,12 @@ disease:`<h2>Disease Checker — Clinical Decision Support</h2>
 <div class="panel"><h3>Clinical review</h3><p class="muted">The result is a structured symptom summary, not a disease prediction. Use examination, patient history and appropriate laboratory or imaging tests before reaching a diagnosis.</p></div>`,
 labreader:`<h2>Laboratory Report Reader</h2>
 <div class="notice">OCR can misread small print, decimals, units and reference ranges. Always compare extracted text with the original report. This tool does not diagnose disease.</div>
-<div class="panel"><h3>Upload or photograph a laboratory report</h3>
-<div class="grid2">
-  <div><label for="labImageFile">Choose from gallery</label><input id="labImageFile" type="file" accept="image/jpeg,image/png,image/webp"></div>
-  <div><label for="labCameraFile">Take a photo with camera</label><button class="btn secondary" id="openLabCamera" type="button">📷 Open Camera</button><input id="labCameraFile" type="file" accept="image/*" capture="environment" style="display:none"></div>
+<div class="panel lab-reader"><h3>Upload or photograph a laboratory report</h3>
+<div class="lab-upload-grid">
+  <div><label for="labImageFile">Choose a report from gallery</label><input class="lab-file-control" id="labImageFile" type="file" accept="image/jpeg,image/png,image/webp"></div>
+  <div><label for="labCameraFile">Take a new report photo</label><label class="lab-camera-label" for="labCameraFile">📷 Take Photo with Camera</label><input id="labCameraFile" type="file" accept="image/*" capture="environment" style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden" aria-label="Take a photo with the rear camera"></div>
 </div>
-<p class="muted">You can use either option. The camera option normally opens your phone's rear camera.</p>
+<p class="muted">Choose either option. On a supported phone, Take Photo opens the camera and requests the rear camera.</p>
 <p><button class="btn" id="readLabImage" type="button">Read Report Image</button></p><p class="muted">OCR needs an internet connection on the hosted app. For best results, use a sharp, straight, well-lit image. Large or blurry reports may take longer.</p><div id="ocrStatus" class="muted" aria-live="polite">Choose a report from your gallery or take a new photo.</div>
 <label for="ocrText">Extracted text — check and correct it</label><textarea id="ocrText" rows="10" maxlength="12000" placeholder="Recognized report text will appear here. You can also paste report text manually."></textarea>
 <p><button class="btn secondary" id="parseLabText" type="button">Organize extracted results</button></p><div id="ocrParsed" aria-live="polite"></div>
@@ -2053,6 +2076,38 @@ show("dashboard");
     }
   });
 
+  // Improve OCR input by enlarging and gently increasing grayscale contrast.
+  // This is preprocessing only; it cannot correct blurred or obscured source text.
+  async function prepareLabImageForOCR(file) {
+    if (!window.createImageBitmap) return file;
+    let bitmap;
+    try {
+      bitmap = await createImageBitmap(file);
+      const scale = Math.min(2.2, 3200 / Math.max(bitmap.width, bitmap.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+      canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+      const context = canvas.getContext("2d", { willReadFrequently: true });
+      if (!context) return file;
+      context.fillStyle = "#ffffff";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      const image = context.getImageData(0, 0, canvas.width, canvas.height);
+      const pixels = image.data;
+      for (let i = 0; i < pixels.length; i += 4) {
+        const gray = 0.299 * pixels[i] + 0.587 * pixels[i + 1] + 0.114 * pixels[i + 2];
+        const contrast = Math.max(0, Math.min(255, (gray - 128) * 1.22 + 128));
+        pixels[i] = pixels[i + 1] = pixels[i + 2] = contrast;
+      }
+      context.putImageData(image, 0, 0);
+      return canvas;
+    } catch (_) {
+      return file;
+    } finally {
+      if (bitmap && typeof bitmap.close === "function") bitmap.close();
+    }
+  }
+
   // OCR lab reader. Explicit asset URLs prevent the worker/core/language files
   // from being guessed relative to a local content:// page.
   document.addEventListener("click", async event => {
@@ -2127,8 +2182,9 @@ show("dashboard");
           }
         });
 
-        status.textContent = "Reading the report image. Please keep this page open…";
-        const result = await worker.recognize(file);
+        status.textContent = "Enhancing the image and reading the report. Please keep this page open…";
+        const ocrImage = await prepareLabImageForOCR(file);
+        const result = await worker.recognize(ocrImage);
         output.value = (result && result.data && result.data.text) ? result.data.text.trim() : "";
 
         if (output.value) {
@@ -2155,28 +2211,32 @@ show("dashboard");
       if (!parsed) return;
       const rows = [];
       const number = "[+-]?\\d+(?:[.,]\\d+)?";
-      const resultPattern = new RegExp("(" + number + ")\\s*([HL])?\\s*(mmol\\/L|umol\\/L|µmol\\/L|mg\\/dL|g\\/dL|g\\/L|U\\/L|IU\\/L|%|10\\^?9\\/L|10\\^?12\\/L)?\\s+(" + number + "\\s*[-~–]\\s*" + number + ")", "i");
+      const unitPattern = "mmol\\/L|umol\\/L|µmol\\/L|mg\\/dL|g\\/dL|g\\/L|U\\/L|IU\\/L|%|10\\^?9\\/L|10\\^?12\\/L";
+      // Require a separator before the value so digits inside names (e.g. HbA1c)
+      // are less likely to be mistaken for a measured result.
+      const resultPattern = new RegExp("(?:^|\\s|:|=)(" + number + ")\\s*([HL])?\\s*(" + unitPattern + ")?(?:\\s+(" + number + "\\s*[-~–]\\s*" + number + "))?", "i");
       lines.forEach(line => {
-        const clean = line.replace(/^\s*\d+\s*[.)\-]?\s*/, "");
+        const clean = line.replace(/^\\s*\\d+\\s*[.)\\-]?\\s*/, "");
         const match = clean.match(resultPattern);
         if (!match) return;
-        const resultAt = clean.indexOf(match[0]);
-        const test = clean.slice(0, resultAt).replace(/[|_\[\]]/g, " ").replace(/\s+/g, " ").trim();
+        const resultAt = match.index + match[0].search(new RegExp(number));
+        const test = clean.slice(0, resultAt).replace(/[|_\\[\\]]/g, " ").replace(/\\s+/g, " ").trim();
+        if (!test || test.length < 2) return;
         const value = match[1].replace(",", ".");
-        const range = match[4].replace(/,/g, ".").replace(/[~–]/g, "-").replace(/\s+/g, "");
-        const unit = match[3] || "Not clear";
+        const range = match[4] ? match[4].replace(/,/g, ".").replace(/[~–]/g, "-").replace(/\\s+/g, "") : "Not shown / unclear";
+        const unit = match[3] || "Not shown / unclear";
         const flag = (match[2] || "").toUpperCase();
-        const uncertain = /[Il|]/.test(clean) || unit === "Not clear" || !test;
-        rows.push({test: test || "Test name unclear", value, flag, unit, range, source: line, uncertain});
+        const uncertain = !match[3] || !match[4] || /[Il|]/.test(clean) || /[?]/.test(clean);
+        rows.push({test, value, flag, unit, range, source: line, uncertain});
       });
       if (!rows.length) {
         parsed.innerHTML = '<div class="lab-warning"><strong>No reliable result rows identified.</strong> The extracted text may need correction. Please compare it with the original report and edit the text before trying again.</div><p class="muted">For safety, the reader will not guess missing values, units or reference ranges.</p>';
         return;
       }
-      parsed.innerHTML = '<div class="lab-warning"><strong>Important:</strong> These are possible text matches, not verified laboratory results or a diagnosis. Check every row against the original report.</div>' +
-        '<div style="overflow-x:auto"><table class="lab-results"><thead><tr><th>Test</th><th>Result</th><th>Unit</th><th>Reference range</th><th>OCR review</th></tr></thead><tbody>' +
-        rows.map(row => '<tr><td>' + escapeHtml(row.test) + '</td><td><strong>' + escapeHtml(row.value) + '</strong> ' + escapeHtml(row.flag) + '</td><td>' + escapeHtml(row.unit) + '</td><td>' + escapeHtml(row.range) + '</td><td class="' + (row.uncertain ? 'lab-uncertain' : 'lab-good') + '">' + (row.uncertain ? 'Please verify' : 'Check original') + '</td></tr>').join("") +
-        '</tbody></table></div><p class="muted">' + rows.length + ' possible result line(s) found. OCR may confuse 0/O, 1/I/l, commas and decimal points. The app does not automatically label a result high or low because the extracted values may be inaccurate.</p>' +
+      parsed.innerHTML = '<div class="lab-warning"><strong>Manual verification required:</strong> These are possible text matches, not confirmed laboratory results or a diagnosis. Check every test name, decimal, unit and reference range against the original report.</div>' +
+        '<div style="overflow-x:auto"><table class="lab-results"><thead><tr><th>Test</th><th>Result</th><th>Unit</th><th>Reference range</th><th>Review</th></tr></thead><tbody>' +
+        rows.map(row => '<tr><td>' + escapeHtml(row.test) + '</td><td><strong>' + escapeHtml(row.value) + '</strong> ' + escapeHtml(row.flag) + '</td><td>' + escapeHtml(row.unit) + '</td><td>' + escapeHtml(row.range) + '</td><td class="' + (row.uncertain ? 'lab-uncertain' : 'lab-good') + '">' + (row.uncertain ? 'Verify manually' : 'Check original') + '</td></tr>').join("") +
+        '</tbody></table></div><p class="muted">' + rows.length + ' possible result line(s) found. OCR can confuse 0/O, 1/I/l, commas and decimal points. Rows missing a unit or reference range are highlighted for manual review. Do not use this output alone for diagnosis or treatment.</p>' +
         '<details><summary>Show original extracted lines</summary><ul>' + rows.map(row => '<li>' + escapeHtml(row.source) + '</li>').join("") + '</ul></details>';
     }
   });
