@@ -10,7 +10,9 @@
 <title>Eno Brago Herbal Clinic — App Prototype</title>
 <style>
 :root{--green:#176b35;--green2:#2d914a;--pale:#edf7ef;--ink:#173324;--muted:#64756a;--line:#dce8df;--white:#fff;--bg:#f5f8f5}
-*{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--ink)}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font-family:inherit}h1,h2,h3{letter-spacing:-.02em}p{line-height:1.6}label{font-size:14px;line-height:1.45}nav button{font-size:15px;line-height:1.4}table{font-size:14px}th,td{line-height:1.45} .panel{padding:20px} .muted{font-size:14px;line-height:1.65} .lab-results{width:100%;border-collapse:collapse;margin-top:12px;background:#fff}.lab-results th,.lab-results td{padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:top}.lab-results th{background:#f0f7f1;color:var(--ink)}.lab-warning{background:#fff7df;border:1px solid #efd995;border-radius:9px;padding:10px;margin:10px 0;color:#6c5413}.lab-good{color:#176b35;font-weight:600}.lab-uncertain{color:#8b5415;font-weight:600}
+input,select,textarea{font-size:16px;line-height:1.5}textarea{min-height:120px}button{touch-action:manipulation}
 header{background:linear-gradient(120deg,#0d4f28,#2d914a);color:white;padding:22px 20px}
 .brand{display:flex;gap:14px;align-items:center;max-width:1200px;margin:auto}
 .logo{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;background:#fff;color:var(--green);font-size:27px;font-weight:bold;border:3px solid #b7e58a}
@@ -494,10 +496,15 @@ disease:`<h2>Disease Checker — Clinical Decision Support</h2>
 <div class="panel"><h3>Clinical review</h3><p class="muted">The result is a structured symptom summary, not a disease prediction. Use examination, patient history and appropriate laboratory or imaging tests before reaching a diagnosis.</p></div>`,
 labreader:`<h2>Laboratory Report Reader</h2>
 <div class="notice">OCR can misread small print, decimals, units and reference ranges. Always compare extracted text with the original report. This tool does not diagnose disease.</div>
-<div class="panel"><h3>Upload or photograph a laboratory report</h3><label for="labImageFile">Report image (JPG, PNG or WEBP)</label><input id="labImageFile" type="file" accept="image/*">
-<p><button class="btn" id="readLabImage" type="button">Read Report Image</button></p><p class="muted">OCR needs an internet connection on the hosted app. For best results, use a sharp, straight, well-lit image. Large or blurry reports may take longer.</p><div id="ocrStatus" class="muted" aria-live="polite">Choose a clear, well-lit report image.</div>
+<div class="panel"><h3>Upload or photograph a laboratory report</h3>
+<div class="grid2">
+  <div><label for="labImageFile">Choose from gallery</label><input id="labImageFile" type="file" accept="image/jpeg,image/png,image/webp"></div>
+  <div><label for="labCameraFile">Take a photo with camera</label><button class="btn secondary" id="openLabCamera" type="button">📷 Open Camera</button><input id="labCameraFile" type="file" accept="image/*" capture="environment" style="display:none"></div>
+</div>
+<p class="muted">You can use either option. The camera option normally opens your phone's rear camera.</p>
+<p><button class="btn" id="readLabImage" type="button">Read Report Image</button></p><p class="muted">OCR needs an internet connection on the hosted app. For best results, use a sharp, straight, well-lit image. Large or blurry reports may take longer.</p><div id="ocrStatus" class="muted" aria-live="polite">Choose a report from your gallery or take a new photo.</div>
 <label for="ocrText">Extracted text — check and correct it</label><textarea id="ocrText" rows="10" maxlength="12000" placeholder="Recognized report text will appear here. You can also paste report text manually."></textarea>
-<p><button class="btn secondary" id="parseLabText" type="button">Identify possible result lines</button></p><div id="ocrParsed" class="muted"></div>
+<p><button class="btn secondary" id="parseLabText" type="button">Organize extracted results</button></p><div id="ocrParsed" aria-live="polite"></div>
 <p class="muted">This reader does not automatically save to the patient's laboratory record. Verify the report and enter the confirmed values in Laboratory Records.</p></div>`,
 
 mobileanalyzer:`<h2>Mobile Health Analyzer</h2>
@@ -2028,6 +2035,24 @@ show("dashboard");
     box.innerHTML+='<div class="panel"><h3>Symptom summary for clinician review</h3><p><strong>Age:</strong> '+escapeHtml(age||"Not entered")+'</p><p><strong>Duration:</strong> '+escapeHtml(duration||"Not entered")+'</p><p><strong>Symptoms:</strong><br>'+escapeHtml(symptoms).replace(/\n/g,"<br>")+'</p><p><strong>Warning signs:</strong> '+escapeHtml(flags.join("; ")||"None selected")+'</p><p class="muted">This is not a disease diagnosis or probability estimate. A clinician should review history, examination and appropriate tests.</p></div>';
   });
 
+  // Lab Reader camera capture. Keep gallery selection available as a separate option.
+  document.addEventListener("click", event => {
+    const target = event.target instanceof Element ? event.target : event.target?.parentElement;
+    if (target?.closest("#openLabCamera")) {
+      document.getElementById("labCameraFile")?.click();
+    }
+  });
+  document.addEventListener("change", event => {
+    if (event.target?.id === "labCameraFile") {
+      const gallery = document.getElementById("labImageFile");
+      if (event.target.files?.length && gallery) gallery.value = "";
+    }
+    if (event.target?.id === "labImageFile") {
+      const camera = document.getElementById("labCameraFile");
+      if (event.target.files?.length && camera) camera.value = "";
+    }
+  });
+
   // OCR lab reader. Explicit asset URLs prevent the worker/core/language files
   // from being guessed relative to a local content:// page.
   document.addEventListener("click", async event => {
@@ -2035,11 +2060,12 @@ show("dashboard");
     if (!target) return;
 
     if (target.closest("#readLabImage")) {
-      const fileInput = document.getElementById("labImageFile");
+      const galleryInput = document.getElementById("labImageFile");
+      const cameraInput = document.getElementById("labCameraFile");
       const status = document.getElementById("ocrStatus");
       const button = document.getElementById("readLabImage");
       const output = document.getElementById("ocrText");
-      const file = fileInput?.files?.[0];
+      const file = cameraInput?.files?.[0] || galleryInput?.files?.[0];
 
       if (!status || !button || !output) return;
       if (!file) {
@@ -2125,13 +2151,33 @@ show("dashboard");
     if (target.closest("#parseLabText")) {
       const text = document.getElementById("ocrText")?.value || "";
       const lines = text.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
-      const matches = lines.filter(line => /\d/.test(line));
       const parsed = document.getElementById("ocrParsed");
       if (!parsed) return;
-      parsed.innerHTML = matches.length
-        ? '<strong>Lines containing numbers (review manually):</strong><ul>' +
-          matches.map(line => '<li>' + escapeHtml(line) + '</li>').join("") + '</ul>'
-        : "No numeric result lines detected. Review the extracted text manually.";
+      const rows = [];
+      const number = "[+-]?\\d+(?:[.,]\\d+)?";
+      const resultPattern = new RegExp("(" + number + ")\\s*([HL])?\\s*(mmol\\/L|umol\\/L|µmol\\/L|mg\\/dL|g\\/dL|g\\/L|U\\/L|IU\\/L|%|10\\^?9\\/L|10\\^?12\\/L)?\\s+(" + number + "\\s*[-~–]\\s*" + number + ")", "i");
+      lines.forEach(line => {
+        const clean = line.replace(/^\s*\d+\s*[.)\-]?\s*/, "");
+        const match = clean.match(resultPattern);
+        if (!match) return;
+        const resultAt = clean.indexOf(match[0]);
+        const test = clean.slice(0, resultAt).replace(/[|_\[\]]/g, " ").replace(/\s+/g, " ").trim();
+        const value = match[1].replace(",", ".");
+        const range = match[4].replace(/,/g, ".").replace(/[~–]/g, "-").replace(/\s+/g, "");
+        const unit = match[3] || "Not clear";
+        const flag = (match[2] || "").toUpperCase();
+        const uncertain = /[Il|]/.test(clean) || unit === "Not clear" || !test;
+        rows.push({test: test || "Test name unclear", value, flag, unit, range, source: line, uncertain});
+      });
+      if (!rows.length) {
+        parsed.innerHTML = '<div class="lab-warning"><strong>No reliable result rows identified.</strong> The extracted text may need correction. Please compare it with the original report and edit the text before trying again.</div><p class="muted">For safety, the reader will not guess missing values, units or reference ranges.</p>';
+        return;
+      }
+      parsed.innerHTML = '<div class="lab-warning"><strong>Important:</strong> These are possible text matches, not verified laboratory results or a diagnosis. Check every row against the original report.</div>' +
+        '<div style="overflow-x:auto"><table class="lab-results"><thead><tr><th>Test</th><th>Result</th><th>Unit</th><th>Reference range</th><th>OCR review</th></tr></thead><tbody>' +
+        rows.map(row => '<tr><td>' + escapeHtml(row.test) + '</td><td><strong>' + escapeHtml(row.value) + '</strong> ' + escapeHtml(row.flag) + '</td><td>' + escapeHtml(row.unit) + '</td><td>' + escapeHtml(row.range) + '</td><td class="' + (row.uncertain ? 'lab-uncertain' : 'lab-good') + '">' + (row.uncertain ? 'Please verify' : 'Check original') + '</td></tr>').join("") +
+        '</tbody></table></div><p class="muted">' + rows.length + ' possible result line(s) found. OCR may confuse 0/O, 1/I/l, commas and decimal points. The app does not automatically label a result high or low because the extracted values may be inaccurate.</p>' +
+        '<details><summary>Show original extracted lines</summary><ul>' + rows.map(row => '<li>' + escapeHtml(row.source) + '</li>').join("") + '</ul></details>';
     }
   });
 
