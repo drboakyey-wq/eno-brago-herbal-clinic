@@ -2173,55 +2173,49 @@ show("dashboard");
     }
 
     if (target.closest("#parseLabText")) {
-      const text = document.getElementById("ocrText")?.value || "";
-      const lines = text.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+      const raw = document.getElementById("ocrText")?.value || "";
       const parsed = document.getElementById("ocrParsed");
       if (!parsed) return;
-      const rows = [];
-      const number = "[+-]?\\d+(?:[.,]\\d+)?";
-      const rangePattern = new RegExp("(" + number + ")\\s*[-~–]\\s*(" + number + ")");
-      const valuePattern = new RegExp("(" + number + ")\\s*([HL])?\\s*(mmol\\/L|umol\\/L|µmol\\/L|mg\\/dL|g\\/dL|g\\/L|U\\/L|IU\\/L|%|10\\^?9\\/L|10\\^?12\\/L)?", "i");
-      const ignored = /^(test|investigation|parameter|result|unit|reference|range|normal|value|patient|name|date|age|sex|sample|specimen|lab(oratory)?|report)\b/i;
-      lines.forEach((line, index) => {
-        const clean = line.replace(/^\s*\d+\s*[.)\-]?\s*/, "").replace(/[|_\[\]]/g, " ").replace(/\s+/g, " ").trim();
-        if (!clean || ignored.test(clean)) return;
-        const match = clean.match(valuePattern);
-        if (!match) return;
-        const before = clean.slice(0, match.index).trim();
-        const after = clean.slice(match.index + match[0].length).trim();
-        let test = before.replace(/[:;,\-]+$/, "").trim();
-        // Some OCR engines place the test name on the preceding line and its value below.
-        if (!test && index > 0) {
-          const previous = lines[index - 1].replace(/^\s*\d+\s*[.)\-]?\s*/, "").trim();
-          if (previous && /[A-Za-z]/.test(previous) && !ignored.test(previous) && !new RegExp("^" + number + "$").test(previous)) test = previous;
+      const lines = raw.split(/\r?\n/).map(x => x.replace(/[|]/g, " ").replace(/\s+/g, " ").trim()).filter(Boolean);
+      const known = /\b(haemoglobin|hemoglobin|hb|wbc|white blood cell|rbc|red blood cell|platelet|plt|pcv|hematocrit|haematocrit|mcv|mch|mchc|rdw|neutrophil|lymphocyte|monocyte|eosinophil|basophil|fasting blood sugar|fbs|random blood sugar|rbs|blood glucose|glucose|hba1c|creatinine|urea|bun|uric acid|sodium|potassium|chloride|bicarbonate|calcium|phosphate|magnesium|total cholesterol|hdl|ldl|triglyceride|ast|alt|alp|bilirubin|albumin|total protein|tsh|t3|t4|psa|esr|crp|malaria|widal|hiv|hbsag|hcv|vdrl|rpr|urine ph|specific gravity)\b/i;
+      const skip = /^(test|investigation|parameter|result|unit|reference|range|normal|value|patient|name|date|age|sex|sample|specimen|laboratory|lab report|report|method|flag|biology|haematology|hematology|chemistry|serology|urinalysis)\b/i;
+      const num = "[+-]?\\d+(?:[.,]\\d+)?";
+      const valueRe = new RegExp("(?:result\\s*[:=]?\\s*)?("+num+")(?:\\s*([HL]))?(?:\\s*(mmol/L|umol/L|µmol/L|mg/dL|g/dL|g/L|U/L|IU/L|mIU/L|µIU/mL|%|10\\^?9/L|10\\^?12/L|cells/µL|cells/uL))?", "i");
+      const rangeRe = new RegExp("(?:ref(?:erence)?\\s*(?:range)?\\s*[:=]?\\s*)?("+num+")\\s*[-–~]\\s*("+num+"(?:\\s*(?:mmol/L|umol/L|µmol/L|mg/dL|g/dL|g/L|U/L|IU/L|%))?)", "i");
+      const rows=[];
+      let pendingName="";
+      const cleanName = x => x.replace(/^[\s\d.)#:-]+/, "").replace(/[\s:;,.]+$/, "").trim();
+      for (let i=0;i<lines.length;i++) {
+        const line=lines[i];
+        if (skip.test(line)) { if (/^(reference|normal|range)\b/i.test(line) && rows.length) { const rm=line.match(rangeRe); if(rm && rows[rows.length-1].range==="Not shown / unclear") rows[rows.length-1].range=rm[0].trim(); } continue; }
+        const m=line.match(valueRe);
+        if (!m) {
+          const candidate=cleanName(line);
+          if (candidate.length>=3 && candidate.length<=65 && /[A-Za-z]/.test(candidate) && !/\d{2,}/.test(candidate)) pendingName=candidate;
+          continue;
         }
-        if (!test || !/[A-Za-z]/.test(test) || test.length > 80) return;
-        const range = after.match(rangePattern);
-        const value = match[1].replace(",", ".");
-        const unit = match[3] || "Not shown / unclear";
-        const flag = (match[2] || "").toUpperCase();
-        const rangeText = range ? (range[1] + "-" + range[2]).replace(/,/g, ".") : "Not shown / unclear";
-        const uncertain = /[Il|]/.test(clean) || unit === "Not shown / unclear" || !range;
-        rows.push({test, value, flag, unit, range: rangeText, source: line, uncertain});
-      });
-      // Remove duplicate OCR matches while preserving the original line for review.
-      const uniqueRows = [];
-      const seenRows = new Set();
-      rows.forEach(row => {
-        const key = [row.test.toLowerCase(), row.value, row.unit.toLowerCase()].join("|");
-        if (!seenRows.has(key)) { seenRows.add(key); uniqueRows.push(row); }
-      });
-      rows.length = 0;
-      rows.push(...uniqueRows);
-      if (!rows.length) {
-        parsed.innerHTML = '<div class="lab-warning"><strong>No possible result rows found.</strong> The OCR text may have separated the test name and result into different lines. Please check and edit the extracted text manually.</div><p class="muted">The reader will not invent missing test names, values, units or reference ranges.</p>';
+        const before=cleanName(line.slice(0,m.index));
+        const test=before || pendingName;
+        if (!test || test.length<3 || test.length>65 || !/[A-Za-z]/.test(test) || skip.test(test)) { pendingName=""; continue; }
+        // Avoid treating a numeric reference-range line as a test result.
+        if (/^(?:ref|reference|normal|range)\b/i.test(line)) continue;
+        const rest=line.slice(m.index+m[0].length);
+        const rm=rest.match(rangeRe) || line.match(rangeRe);
+        const unit=m[3] || "Not shown / unclear";
+        const flag=(m[2]||"").toUpperCase();
+        const nameIsKnown=known.test(test);
+        const uncertain=!nameIsKnown || unit==="Not shown / unclear" || !rm || /[Il|]/.test(line);
+        rows.push({test,value:m[1].replace(",","."),flag,unit,range:rm?rm[0].replace(/^\s*(?:ref(?:erence)?\s*(?:range)?\s*[:=]?\s*)?/i,"").trim():"Not shown / unclear",source:line,uncertain});
+        pendingName="";
+      }
+      const unique=[]; const seen=new Set();
+      for(const row of rows){const k=[row.test.toLowerCase(),row.value,row.unit.toLowerCase()].join("|");if(!seen.has(k)){seen.add(k);unique.push(row);}}
+      if(!unique.length){
+        parsed.innerHTML='<div class="lab-warning"><strong>No clear result rows could be organised.</strong> The text may be split across columns or lines. Please compare the extracted text with the report and correct it manually. Do not rely on guessed values.</div><p class="muted">The reader will not invent missing test names, results, units or reference ranges.</p>';
         return;
       }
-      parsed.innerHTML = '<div class="lab-warning"><strong>Important:</strong> These are possible text matches, not verified laboratory results or a diagnosis. Check every row against the original report.</div>' +
-        '<div style="overflow-x:auto"><table class="lab-results"><thead><tr><th>Test</th><th>Result</th><th>Unit</th><th>Reference range</th><th>OCR review</th></tr></thead><tbody>' +
-        rows.map(row => '<tr><td>' + escapeHtml(row.test) + '</td><td><strong>' + escapeHtml(row.value) + '</strong> ' + escapeHtml(row.flag) + '</td><td>' + escapeHtml(row.unit) + '</td><td>' + escapeHtml(row.range) + '</td><td class="' + (row.uncertain ? 'lab-uncertain' : 'lab-good') + '">' + (row.uncertain ? 'Please verify' : 'Check original') + '</td></tr>').join("") +
-        '</tbody></table></div><p class="muted">' + rows.length + ' possible result line(s) found. Some units or reference ranges may be missing because reports use different layouts. OCR may confuse 0/O, 1/I/l, commas and decimal points. Verify every item against the original report; this is not a diagnosis.</p>' +
-        '<details><summary>Show original extracted lines</summary><ul>' + rows.map(row => '<li>' + escapeHtml(row.source) + '</li>').join("") + '</ul></details>';
+      parsed.innerHTML='<div class="lab-warning"><strong>Manual verification required:</strong> These are possible matches from OCR, not confirmed laboratory results or a diagnosis. Verify every character against the original report.</div>'+
+        '<div style="overflow-x:auto"><table class="lab-results"><thead><tr><th>Test</th><th>Result</th><th>Unit</th><th>Reference range</th><th>Review</th></tr></thead><tbody>'+unique.map(r=>'<tr><td>'+escapeHtml(r.test)+'</td><td><strong>'+escapeHtml(r.value)+'</strong> '+escapeHtml(r.flag)+'</td><td>'+escapeHtml(r.unit)+'</td><td>'+escapeHtml(r.range)+'</td><td class="lab-uncertain">'+(r.uncertain?'Please verify':'Check original')+'</td></tr>').join('')+'</tbody></table></div><p class="muted">'+unique.length+' possible row(s). OCR may confuse letters, digits, decimal points and units. No result is automatically saved. Verify against the original report.</p><details><summary>Show extracted source lines</summary><ul>'+unique.map(r=>'<li>'+escapeHtml(r.source)+'</li>').join('')+'</ul></details>';
     }
   });
 
